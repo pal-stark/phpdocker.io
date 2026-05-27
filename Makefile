@@ -61,14 +61,14 @@ install-assets-dev:
 composer-install:
 	$(PHP_RUN) composer -o install
 
-yarn-install:
+npm-install:
 	docker run  \
 	    --rm \
 	    -t \
 	    -v "`pwd`:/workdir" \
 	    -w /workdir \
 	    node:alpine \
-	    sh -c "yarn install --immutable"
+	    npm ci
 
 build-css:
 	docker run \
@@ -77,9 +77,9 @@ build-css:
 	    -v "`pwd`:/workdir" \
 	    -w /workdir \
 	    node:alpine \
-	    sh -c "yarn install && yarn build:css"
+	    sh -c "npm ci && npm run build:css"
 
-install-dependencies: composer-install yarn-install build-css
+install-dependencies: composer-install npm-install build-css
 
 composer-update:
 	$(PHP_RUN) composer update --no-scripts
