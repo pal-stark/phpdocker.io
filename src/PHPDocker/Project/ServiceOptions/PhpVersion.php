@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-/**
- * Copyright 2016 Luis Alberto Pabón Flores
+
+/*
+ * Copyright 2021 Luis Alberto Pabón Flores
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +15,30 @@ declare(strict_types=1);
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 namespace App\PHPDocker\Project\ServiceOptions;
 
-/**
- * Options for nginx container.
- */
-final class Nginx extends Base
+use InvalidArgumentException;
+
+enum PhpVersion: string
 {
-    public function __construct(bool $enabled = true)
+    case PHP_85 = '8.5';
+    case PHP_84 = '8.4';
+    case PHP_83 = '8.3';
+    case PHP_82 = '8.2';
+
+    /**
+     * @return string[]
+     */
+    public static function values(): array
     {
-        parent::__construct($enabled);
+        return array_map(static fn (self $version): string => $version->value, self::cases());
+    }
+
+    public static function fromString(string $version): self
+    {
+        return self::tryFrom($version) ?? throw new InvalidArgumentException(sprintf('PHP version specified (%s) is unsupported', $version));
     }
 }

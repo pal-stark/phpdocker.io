@@ -21,32 +21,16 @@ namespace App\PHPDocker\Project\ServiceOptions;
 
 use App\PHPDocker\PhpExtension\AvailableExtensionsFactory;
 use App\PHPDocker\PhpExtension\PhpExtension;
-use InvalidArgumentException;
 
 /**
  * Options for PHP container.
  */
-class Php extends Base
+final class Php extends Base
 {
-    public const string PHP_VERSION_82 = '8.2';
-    public const string PHP_VERSION_83 = '8.3';
-    public const string PHP_VERSION_84 = '8.4';
-    public const string PHP_VERSION_85 = '8.5';
-
-    private string $version;
+    private readonly string $version;
 
     /** @var PhpExtension[] */
-    private array $extensions = [];
-
-    /**
-     * Supported PHP versions
-     */
-    private const array SUPPORTED_VERSIONS = [
-        self::PHP_VERSION_85,
-        self::PHP_VERSION_84,
-        self::PHP_VERSION_83,
-        self::PHP_VERSION_82,
-    ];
+    private readonly array $extensions;
 
     /**
      * @param string[] $extensions
@@ -58,19 +42,17 @@ class Php extends Base
         private readonly bool $hasGit,
         private readonly string $frontControllerPath
     ) {
-        $this->setEnabled(true);
+        parent::__construct(true);
 
-        // Validate & set version
-        if (in_array($version, self::SUPPORTED_VERSIONS, true) === false) {
-            throw new InvalidArgumentException(sprintf('PHP version specified (%s) is unsupported', $version));
-        }
-
-        $this->version = $version;
+        $this->version = self::fromString($version)->value;
 
         // Parse extensions
+        $parsedExtensions = [];
         foreach ($extensions as $phpExtension) {
-            $this->addExtensionByName($phpExtension);
+            $parsedExtensions[] = $this->addExtensionByName($phpExtension);
         }
+
+        $this->extensions = $parsedExtensions;
     }
 
     public function getVersion(): string
@@ -98,25 +80,29 @@ class Php extends Base
      */
     public static function getSupportedVersions(): array
     {
-        return self::SUPPORTED_VERSIONS;
+        return self::values();
     }
 
     /**
      * Adds an extension given the name only.
      */
-    private function addExtensionByName(string $extensionName): void
+    private function addExtensionByName(string $extensionName): PhpExtension
     {
-        static $extensionInstance;
-
-        if ($extensionInstance === null) {
-            $extensionInstance = AvailableExtensionsFactory::create($this->getVersion());
-        }
-
-        $this->extensions[] = $extensionInstance->getPhpExtension($extensionName);
+        return AvailableExtensionsFactory::create($this->getVersion())->getPhpExtension($extensionName);
     }
 
     public function getFrontControllerPath(): string
     {
         return $this->frontControllerPath;
+    }
+
+    private static function values(): array
+    {
+        return PhpVersion::values();
+    }
+
+    private static function fromString(string $version): PhpVersion
+    {
+        return PhpVersion::fromString($version);
     }
 }

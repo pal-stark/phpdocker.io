@@ -19,40 +19,25 @@ declare(strict_types=1);
 
 namespace App\PHPDocker\Project\ServiceOptions;
 
-use InvalidArgumentException;
-
 /**
  * Options for Elasticsearch container.
  */
-class Elasticsearch extends Base
+final class Elasticsearch extends Base
 {
-    /**
-     * Available versions
-     */
-    private const string VERSION_56 = '5.6';
     private const string VERSION_65 = '6.5.4';
 
-    private const array ALLOWED_VERSIONS = [
-        self::VERSION_65 => '6.5.x',
-        self::VERSION_56 => '5.6.x',
-    ];
+    private readonly string $version;
 
-    private string $version = self::VERSION_65;
+    public function __construct(string $version = self::VERSION_65, bool $enabled = false)
+    {
+        parent::__construct($enabled);
+
+        $this->version = self::fromString($version)->value;
+    }
 
     public function getVersion(): string
     {
         return $this->version;
-    }
-
-    public function setVersion(string $version): self
-    {
-        if (array_key_exists($version, self::ALLOWED_VERSIONS) === false) {
-            throw new InvalidArgumentException(sprintf('Version %s is not supported', $version));
-        }
-
-        $this->version = $version;
-
-        return $this;
     }
 
     /**
@@ -60,6 +45,19 @@ class Elasticsearch extends Base
      */
     public static function getChoices(): array
     {
-        return self::ALLOWED_VERSIONS;
+        return self::choices();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function choices(): array
+    {
+        return ElasticsearchVersion::choices();
+    }
+
+    private static function fromString(string $version): ElasticsearchVersion
+    {
+        return ElasticsearchVersion::fromString($version);
     }
 }

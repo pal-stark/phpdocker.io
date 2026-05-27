@@ -21,9 +21,7 @@ namespace App\Controller;
 use App\Form\Generator\ProjectType;
 use App\PHPDocker\Generator\Generator;
 use App\PHPDocker\PhpExtension\AvailableExtensionsFactory;
-use App\PHPDocker\Project\Project;
-use App\PHPDocker\Project\ServiceOptions\GlobalOptions;
-use App\PHPDocker\Project\ServiceOptions\Php as PhpOptions;
+use App\PHPDocker\Project\ProjectFactory;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -37,6 +35,7 @@ class GeneratorController extends AbstractController
 {
     public function __construct(
         private readonly Generator $generator,
+        private readonly ProjectFactory $projectFactory,
         private readonly string $environment,
     ) {
     }
@@ -52,7 +51,7 @@ class GeneratorController extends AbstractController
         if ($form->isSubmitted() === true && $form->isValid() === true) {
             /** @var array $data */
             $data = $form->getData();
-            $project = $this->hydrateProject($data);
+            $project = $this->projectFactory->fromFormData($data);
 
             // Generate zip file with docker project
             $zipFile = $this->generator->generate($project);
@@ -71,86 +70,7 @@ class GeneratorController extends AbstractController
 
         return $this->render('generator.html.twig', [
             'form'              => $form->createView(),
-            'phpExtensionsJson' => json_encode(AvailableExtensionsFactory::getAllExtensionNames()),
+            'phpExtensionsJson' => json_encode(AvailableExtensionsFactory::getAllExtensionNames(), JSON_THROW_ON_ERROR),
         ]);
-    }
-
-    private function hydrateProject(array $formData): Project
-    {
-        $phpData = $formData['phpOptions'];
-
-        $extensions = $phpData['phpExtensions'] ?? [];
-
-        $phpOptions = new PhpOptions(
-            version: $phpData['version'],
-            extensions: $extensions,
-            hasGit: $phpData['hasGit'],
-            frontControllerPath: $phpData['frontControllerPath'],
-        );
-
-        $globalOptionsData = $formData['globalOptions'];
-        $globalOptions     = new GlobalOptions(
-            basePort: $globalOptionsData['basePort'],
-            appPath: rtrim($globalOptionsData['appPath'], '/'),
-            dockerWorkingDir: rtrim($globalOptionsData['dockerWorkingDir'], '/'),
-        );
-
-        $project = new Project(
-            phpOptions: $phpOptions,
-            globalOptions: $globalOptions,
-        );
-
-        $project->getMemcachedOptions()->setEnabled($formData['hasMemcached']);
-        $project->getRedisOptions()->setEnabled($formData['hasRedis']);
-        $project->getMailhogOptions()->setEnabled($formData['hasMailhog']);
-        $project->getClickhouseOptions()->setEnabled($formData['hasClickhouse']);
-
-        $mysqlData = $formData['mysqlOptions'];
-        if ($mysqlData['hasMysql'] === true) {
-            $project
-                ->getMysqlOptions()
-                ->setEnabled(true)
-                ->setVersion($mysqlData['version'])
-                ->setDatabaseName($mysqlData['databaseName'])
-                ->setRootPassword($mysqlData['rootPassword'])
-                ->setUsername($mysqlData['username'])
-                ->setPassword($mysqlData['password']);
-        }
-
-        $mariaDbData = $formData['mariadbOptions'];
-        if ($mariaDbData['hasMariadb'] === true) {
-            $project
-                ->getMariadbOptions()
-                ->setEnabled(true)
-                ->setVersion($mariaDbData['version'])
-                ->setDatabaseName($mariaDbData['databaseName'])
-                ->setRootPassword($mariaDbData['rootPassword'])
-                ->setUsername($mariaDbData['username'])
-                ->setPassword($mariaDbData['password']);
-        }
-
-        // For some reason, form data comes with version as int (instead of the original string)
-        // because postgres versions can be cast as int (eg Postgres::VERSION_15 = '15' at some point the form casts
-        // it to 15
-        $pgData = $formData['postgresOptions'];
-        if ($pgData['hasPostgres'] === true) {
-            $project
-                ->getPostgresOptions()
-                ->setEnabled(true)
-                ->setVersion((string) $pgData['version'])
-                ->setDatabaseName($pgData['databaseName'])
-                ->setRootUser($pgData['rootUser'])
-                ->setRootPassword($pgData['rootPassword']);
-        }
-
-        $esData = $formData['elasticsearchOptions'];
-        if ($esData['hasElasticsearch'] === true) {
-            $project
-                ->getElasticsearchOptions()
-                ->setEnabled(true)
-                ->setVersion($esData['version']);
-        }
-
-        return $project;
     }
 }

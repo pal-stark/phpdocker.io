@@ -21,29 +21,29 @@ namespace App\PHPDocker\Project\ServiceOptions;
 /**
  * Options for MySQL container.
  */
-class MySQL extends AbstractMySQL
+final class MySQL extends AbstractMySQL
 {
-    /**
-     * Available versions
-     */
-    private const string VERSION_55 = '5.5';
-    private const string VERSION_56 = '5.6';
-    private const string VERSION_57 = '5.7';
     private const string VERSION_80 = '8.0';
 
-    private const array ALLOWED_VERSIONS = [
-        self::VERSION_80 => '8.0',
-        self::VERSION_57 => '5.7.x',
-        self::VERSION_56 => '5.6.x',
-        self::VERSION_55 => '5.5.x',
-    ];
-
-    public function __construct()
-    {
-        $this->version = self::VERSION_80;
+    public function __construct(
+        string $version = self::VERSION_80,
+        ?string $rootPassword = null,
+        ?string $databaseName = null,
+        ?string $username = null,
+        ?string $password = null,
+        bool $enabled = false,
+    ) {
+        parent::__construct(
+            version: $version,
+            rootPassword: $rootPassword,
+            databaseName: $databaseName,
+            username: $username,
+            password: $password,
+            enabled: $enabled,
+        );
     }
 
-    protected function getExternalPortOffset(): ?int
+    protected function getExternalPortOffset(): int
     {
         return 2;
     }
@@ -54,6 +54,14 @@ class MySQL extends AbstractMySQL
      */
     public static function getChoices(): array
     {
-        return self::ALLOWED_VERSIONS;
+        return self::choices();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function choices(): array
+    {
+        return MySQLVersion::choices();
     }
 }
